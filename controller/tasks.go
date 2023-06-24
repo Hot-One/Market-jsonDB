@@ -2,7 +2,6 @@ package controller
 
 import (
 	"fmt"
-	"log"
 	"sort"
 
 	"market/models"
@@ -24,9 +23,6 @@ func (c *Controller) Sort(req *models.ShopCartGetListRequest) (*models.ShopCartG
 	sort.Slice(orderDateFilter, func(i, j int) bool {
 		return orderDateFilter[i].Time > orderDateFilter[j].Time
 	})
-	// for _, v := range orderDateFilter {
-	// 	fmt.Println(v)
-	// }
 	resp.Count = len(orderDateFilter)
 	resp.ShopCarts = orderDateFilter
 	return resp, nil
@@ -50,52 +46,40 @@ func (c *Controller) Filter(req *models.ShopCartGetListRequest) ([]*models.ShopC
 
 // 3 Task \\ Done. Work Fully
 // Client history chiqish kerak. Ya'ni sotib olgan mahsulotlari korsatish kerak \\
-func (c *Controller) HistoryUser(req *models.UserPrimaryKey) (*models.History, error) {
-	// productsinfo := []int{}
-	// product := make(map[string][]int)
-	orderMap := make(map[string]interface{})
-
-	// Order \\
-
-	getorder, err := c.ShopCartGetList(&models.ShopCartGetListRequest{})
+func (c *Controller) HistoryUser(req *models.UserPrimaryKey) (map[string][]models.History, error) {
+	var (
+		orders   = []models.History{}
+		orderMap = make(map[string][]models.History)
+	)
+	getOrder, err := c.ShopCartGetList(&models.ShopCartGetListRequest{})
 	if err != nil {
-		log.Printf("Error while HistoryUser => GetByIdOrder: %+v", err)
 		return nil, err
 	}
 
-	// User \\
-	user := ""
-	for _, v := range getorder.ShopCarts {
+	getUser, err := c.UserGetById(&models.UserPrimaryKey{Id: req.Id})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, v := range getOrder.ShopCarts {
+		getproduct, err := c.ProductGetById(&models.ProductPrimaryKey{v.ProductId})
+		if err != nil {
+			return nil, err
+		}
+
 		if v.UserId == req.Id {
 			if v.Status == true {
-				getuser, err := c.UserGetById(&models.UserPrimaryKey{
-					Id: v.UserId,
+				orders = append(orders, models.History{
+					ProductName: getproduct.Name,
+					Count:       v.Count,
+					Total:       v.Count * getproduct.Price,
+					Time:        v.Time,
 				})
-				if err != nil {
-					log.Printf("Error while getuser => UserGetById: %+v", err)
-					return nil, err
-				}
-				user = getuser.Name
-				getproduct, err := c.ProductGetById(&models.ProductPrimaryKey{
-					Id: v.ProductId,
-				})
-				if err != nil {
-					log.Printf("Error while getuser => UserGetById: %+v", err)
-					return nil, err
-				}
-				orderMap["Product"] = getproduct.Name
-				orderMap["Price"] = getproduct.Price
-				orderMap["Count"] = v.Count
-				orderMap["Time"] = v.Time
-
 			}
 		}
 	}
-
-	return &models.History{
-		Name:  user,
-		Order: orderMap,
-	}, nil
+	orderMap[getUser.Name] = orders
+	return orderMap, nil
 }
 
 // 4 - Task \\ Done. Work Fully
@@ -147,160 +131,131 @@ func (c *Controller) ProductCountSold() (map[string]int, error) {
 	return product, nil
 }
 
-// 6 - Task \\ Done. Work 50/50
+// 6 - Task \\ Done. Work Fully
 // Top 10 ta sotilayotgan mahsulotlarni royxati.
-func (c *Controller) TopProducts() ([]string, []int, error) {
-	prodctsMap := make(map[string]int)
-	productName := []string{}
-	productCount := []int{}
+func (c *Controller) TopProducts() ([]*models.ProductsHistory, error) {
+	var (
+		prodctsMap = make(map[string]int)
+		products   []*models.ProductsHistory
+	)
+
 	getOrder, err := c.ShopCartGetList(&models.ShopCartGetListRequest{})
-	if err != nil {
-		return nil, nil, err
-	}
-
-	for _, value := range getOrder.ShopCarts {
-		if value.Status == true {
-			prodctsMap[value.ProductId] += value.Count
-		}
-	}
-	keys := make([]string, 0, len(prodctsMap))
-	for key := range prodctsMap {
-		keys = append(keys, key)
-	}
-	sort.SliceStable(keys, func(i, j int) bool {
-		return prodctsMap[keys[i]] > prodctsMap[keys[j]]
-	})
-
-	for _, k := range keys {
-		getProduct, err := c.ProductGetById(&models.ProductPrimaryKey{
-			Id: k,
-		})
-		if err != nil {
-			return nil, nil, err
-		}
-		// fmt.Println(i, getProduct.Name, prodctsMap[k])
-		productName = append(productName, getProduct.Name)
-		productCount = append(productCount, prodctsMap[k])
-	}
-
-	return productName, productCount, nil
-}
-
-// 7 - Task \\ Done. Work 50/50
-// Top 10 ta sotilayotgan mahsulotlarni royxati.
-func (c *Controller) FailureProducts() ([]string, []int, error) {
-	prodctsMap := make(map[string]int)
-	productName := []string{}
-	productCount := []int{}
-	getOrder, err := c.ShopCartGetList(&models.ShopCartGetListRequest{})
-	if err != nil {
-		return nil, nil, err
-	}
-
-	for _, value := range getOrder.ShopCarts {
-		if value.Status == true {
-			prodctsMap[value.ProductId] += value.Count
-		}
-	}
-	keys := make([]string, 0, len(prodctsMap))
-	for key := range prodctsMap {
-		keys = append(keys, key)
-	}
-	sort.SliceStable(keys, func(i, j int) bool {
-		return prodctsMap[keys[i]] < prodctsMap[keys[j]]
-	})
-
-	for _, k := range keys {
-		getProduct, err := c.ProductGetById(&models.ProductPrimaryKey{
-			Id: k,
-		})
-		if err != nil {
-			return nil, nil, err
-		}
-		// fmt.Println(i, getProduct.Name, prodctsMap[k])
-		productName = append(productName, getProduct.Name)
-		productCount = append(productCount, prodctsMap[k])
-	}
-
-	return productName, productCount, nil
-}
-
-// 8 - Task \\ Done. Work 50/50
-// Qaysi Sanada eng kop mahsulot sotilganligi boyicha jadval
-func (c *Controller) TopTime() (*models.DateHistory, error) {
-	getorder, err := c.ShopCartGetList(&models.ShopCartGetListRequest{})
 	if err != nil {
 		return nil, err
 	}
 
+	for _, value := range getOrder.ShopCarts {
+		getProduct, err := c.ProductGetById(&models.ProductPrimaryKey{Id: value.ProductId})
+		if err != nil {
+			return nil, err
+		}
+		if value.Status == true {
+			prodctsMap[getProduct.Name] += value.Count
+		}
+	}
+	for k, v := range prodctsMap {
+		products = append(products, &models.ProductsHistory{
+			Name:  k,
+			Count: v,
+		})
+	}
+
+	sort.Slice(products, func(i, j int) bool {
+		return products[i].Count > products[j].Count
+	})
+
+	return products, nil
+}
+
+// 7 - Task \\ Done. Work Fully
+// Top 10 ta sotilayotgan mahsulotlarni royxati.
+func (c *Controller) FailureProducts() ([]*models.ProductsHistory, error) {
 	var (
-		countcalc = 0
-		data      = ""
-		count     = []int{}
-		date      = []string{}
+		prodctsMap = make(map[string]int)
+		products   []*models.ProductsHistory
 	)
 
-	for _, value := range getorder.ShopCarts {
-		if value.Status == true {
-			if value.Count >= countcalc {
-				countcalc = value.Count
-				data = value.Time
-			}
-		}
-	}
-	for _, value := range getorder.ShopCarts {
-		if value.Status == true {
-			if value.Count == countcalc {
-				count = append(count, countcalc)
-				date = append(date, data)
-				// getuser, err := c.UserGetById(&models.UserPrimaryKey{Id: value.UserId})
-				// if err != nil {
-				// 	return nil, err
-				// }
-				// fmt.Println(getuser.Name)
-			}
-		}
-	}
-	result := models.DateHistory{
-		Count: count,
-		Date:  date,
+	getOrder, err := c.ShopCartGetList(&models.ShopCartGetListRequest{})
+	if err != nil {
+		return nil, err
 	}
 
-	return &result, nil
+	for _, value := range getOrder.ShopCarts {
+		getProduct, err := c.ProductGetById(&models.ProductPrimaryKey{Id: value.ProductId})
+		if err != nil {
+			return nil, err
+		}
+		if value.Status == true {
+			prodctsMap[getProduct.Name] += value.Count
+		}
+	}
+	for k, v := range prodctsMap {
+		products = append(products, &models.ProductsHistory{
+			Name:  k,
+			Count: v,
+		})
+	}
+
+	sort.Slice(products, func(i, j int) bool {
+		return products[i].Count < products[j].Count
+	})
+
+	return products, nil
+}
+
+// 8 - Task \\ Done. Fully
+// Qaysi Sanada eng kop mahsulot sotilganligi boyicha jadval
+func (c *Controller) TopTime() ([]*models.DateHistory, error) {
+	var (
+		toptimes = make(map[string]int)
+		result   []*models.DateHistory
+	)
+
+	getOrder, err := c.ShopCartGetList(&models.ShopCartGetListRequest{})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, value := range getOrder.ShopCarts {
+		if value.Status == true {
+			toptimes[value.Time] += value.Count
+		}
+	}
+
+	for k, v := range toptimes {
+		result = append(result, &models.DateHistory{
+			Date:  k,
+			Count: v,
+		})
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Count > result[j].Count
+	})
+
+	return result, nil
 }
 
 // 9 - Task \\ Not Done
 // Qaysi category larda qancha mahsulot sotilgan boyicha jadval F
-func (c *Controller) CategoryHistory() (map[string]int, error) {
-	getorder, err := c.ShopCartGetList(&models.ShopCartGetListRequest{})
+func (c *Controller) CategoryHistory() ([]*models.CategoryHistory, error) {
+	// var (
+	// 	categoryMap = make(map[string]int)
+	// 	category    []*models.CategoryHistory
+	// )
+
+	getOrder, err := c.ShopCartGetList(&models.ShopCartGetListRequest{})
 	if err != nil {
 		return nil, err
 	}
-	category := make(map[string]int)
-	for _, v := range getorder.ShopCarts {
-		if v.Status == true {
-			getproduct, err := c.ProductGetById(&models.ProductPrimaryKey{Id: v.ProductId})
-			if err != nil {
-				return nil, err
-			}
-			getcategory, err := c.CategoryGetList(&models.CategoryGetListRequest{})
-			if err != nil {
-				return nil, err
-			}
-			for _, value := range getcategory.Categories {
-				fmt.Println(getproduct)
-				if value.ParentId == getproduct.CategoryId {
-					fmt.Println(value)
-					getbyidP, err := c.CategoryGetById(&models.CategoryPrimaryKey{Id: value.ParentId})
-					if err != nil {
-						return nil, err
-					}
-					category[getbyidP.Name] += v.Count
-				}
-			}
+	for _, value := range getOrder.ShopCarts {
+		getProduct, err := c.ProductGetById(&models.ProductPrimaryKey{Id: value.ProductId})
+		if err != nil {
+			return nil, err
 		}
+		fmt.Println(getProduct.CategoryId)
 	}
-	return category, nil
+	return nil, nil
 }
 
 // 10 - Task \\ Done. Work Fully

@@ -1,11 +1,23 @@
 package models
 
 type History struct {
+	ProductName string
+	Count       int
+	Total       int
+	Time        string
+}
+
+type ProductsHistory struct {
 	Name  string
-	Order map[string]interface{}
+	Count int
 }
 
 type DateHistory struct {
-	Date  []string
-	Count []int
+	Date  string
+	Count int
+}
+
+type CategoryHistory struct {
+	Name  string
+	Count int
 }
