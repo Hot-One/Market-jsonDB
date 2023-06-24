@@ -3,6 +3,7 @@ package jsondb
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -39,7 +40,7 @@ func (u *ProductRepo) Create(req *models.ProductCreate) (*models.Product, error)
 			Id:         id,
 			Name:       req.Name,
 			Price:      req.Price,
-			CategoryId: req.CategoryId,
+			CategoryID: req.CategoryID,
 		}
 	)
 
@@ -93,6 +94,7 @@ func (u *ProductRepo) GetList(req *models.ProductGetListRequest) (*models.Produc
 
 	resp.Count = len(ProductMap)
 	for _, val := range ProductMap {
+		fmt.Println(val)
 		Products := val
 		resp.Products = append(resp.Products, &Products)
 	}
@@ -121,7 +123,7 @@ func (u *ProductRepo) Update(req *models.ProductUpdate) (*models.Product, error)
 		Id:         req.Id,
 		Name:       req.Name,
 		Price:      req.Price,
-		CategoryId: req.CategoryId,
+		CategoryID: req.CategoryID,
 	}
 
 	// Write Update Product \\

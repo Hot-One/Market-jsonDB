@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"market/config"
 	"market/controller"
 	"market/storage/jsondb"
@@ -60,5 +62,11 @@ func main() {
 	// }
 
 	// 9 - Task \\
-	con.CategoryHistory()
+	s, err := con.CategoryHistory()
+	if err != nil {
+		return
+	}
+	for _, v := range s {
+		fmt.Println(v)
+	}
 }

@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"fmt"
 	"sort"
 
 	"market/models"
@@ -236,13 +235,13 @@ func (c *Controller) TopTime() ([]*models.DateHistory, error) {
 	return result, nil
 }
 
-// 9 - Task \\ Not Done
+// 9 - Task \\ Done. Work Fully
 // Qaysi category larda qancha mahsulot sotilgan boyicha jadval F
 func (c *Controller) CategoryHistory() ([]*models.CategoryHistory, error) {
-	// var (
-	// 	categoryMap = make(map[string]int)
-	// 	category    []*models.CategoryHistory
-	// )
+	var (
+		categoryMap = make(map[string]int)
+		category    []*models.CategoryHistory
+	)
 
 	getOrder, err := c.ShopCartGetList(&models.ShopCartGetListRequest{})
 	if err != nil {
@@ -253,9 +252,34 @@ func (c *Controller) CategoryHistory() ([]*models.CategoryHistory, error) {
 		if err != nil {
 			return nil, err
 		}
-		fmt.Println(getProduct.CategoryId)
+		getCategory, err := c.CategoryGetById(&models.CategoryPrimaryKey{Id: getProduct.CategoryID})
+		if err != nil {
+			return nil, err
+		}
+		if value.Status == true {
+			getParent, err := c.CategoryGetList(&models.CategoryGetListRequest{})
+			if err != nil {
+				return nil, err
+			}
+			for _, v := range getParent.Categories {
+				if v.Id == getCategory.ParentId {
+					categoryMap[v.Name] += value.Count
+				}
+			}
+		}
 	}
-	return nil, nil
+	for k, v := range categoryMap {
+		category = append(category, &models.CategoryHistory{
+			Name:  k,
+			Count: v,
+		})
+	}
+
+	sort.Slice(category, func(i, j int) bool {
+		return category[i].Count > category[j].Count
+	})
+
+	return category, nil
 }
 
 // 10 - Task \\ Done. Work Fully

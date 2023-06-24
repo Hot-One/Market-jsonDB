@@ -3,7 +3,6 @@ package jsondb
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -57,7 +56,6 @@ func (u *CategoryRepo) Create(req *models.CategoryCreate) (*models.Category, err
 
 func (u *CategoryRepo) GetById(req *models.CategoryPrimaryKey) (*models.Category, error) {
 	// Read File \\
-	fmt.Println(req)
 	Categories, err := u.read()
 
 	if err != nil {
